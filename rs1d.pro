@@ -52,18 +52,17 @@
 ; MODIFICATION HISTORY:
 ; 06/22/2012 Written by David G. Grier, New York University
 ; 07/16/2012 DGG Correct floating point underflow errors
+; 03/18/2013 DGG Remove unused argument.  Require LAMBDA and MPP
+;   as inputs
 ;
 ; Copyright (c) 2012 David G. Grier
 ;-
-function rs1d, a, z, rc, $
-               delta = delta, $
-               lambda = lambda, $         ; wavelength of light
-               mpp = mpp                  ; micrometers per pixel
+function rs1d, a, z, rc, lambda, mpp
 
 COMPILE_OPT IDL2
 
-umsg = 'USAGE: b = rs1d(a, z, rc)'
-if n_params() ne 3 then begin
+umsg = 'USAGE: b = rs1d(hologram, z, rc, lambda, mpp)'
+if n_params() ne 5 then begin
    message, umsg, /inf
    return, -1
 endif
@@ -71,14 +70,14 @@ endif
 ; hologram
 if ~isa(a, /number, /array) then begin
    message, umsg, /inf
-   message, 'a must be a numeric array', /inf
+   message, 'HOLOGRAM must be a numeric array', /inf
    return, -1
 endif
 sz = size(a)
 ndim = sz[0]
 if ndim ne 2 then begin
    message, umsg, /inf
-   message, 'a must be two-dimensional', /inf
+   message, 'HOLOGRAM must be two-dimensional', /inf
    return, -1
 endif
 
@@ -88,22 +87,28 @@ ny = float(sz[2])
 ; axial samples
 if ~isa(z, /number) then begin
    message, umsg, /inf
-   message, 'z must be a numeric data type', /inf
+   message, 'Z must be a numeric data type', /inf
    return, -1
 endif
 nz = n_elements(z)              ; number of z planes
 
 if ~isa(rc, /number, /array) || n_elements(rc) ne 2 then begin
    message, umsg, /inf
-   message, 'rc must be a two element numeric array', /inf
+   message, 'RC must be a two-element numeric array', /inf
    return, -1
 endif
 
-; parameters
-if ~isa(lambda, /number, /scalar) then $
-   lambda = 0.632               ; HeNe laser in air
-if ~isa(mpp, /number, /scalar) then $
-   mpp = 0.135                  ; Nikon rig
+if ~isa(lambda, /number, /scalar) then begin
+   message, umsg, /inf
+   message, 'LAMBDA should be the wavelength of light in the medium in micrometers', /inf
+   return, -1
+endif
+
+if ~isa(mpp, /number, /scalar) then begin
+   message, umsg, /inf
+   message, 'MPP should be the magnification in micrometers per pixel', /inf
+   return, -1
+endif
 
 ci = complex(0., 1.)
 k = 2.*!pi*mpp/lambda           ; wavenumber in radians/pixel
