@@ -95,6 +95,7 @@
 ; 06/24/2012 DGG Overhauled computation of Hqz.
 ; 03/17/2013 DGG More efficient array manipulations.
 ;   Require lamba and mpp as input parameters.  Check inputs.
+;   Suppress floating point underflow errors.
 ;
 ; Copyright (c) 2006-2012 Sanghyuk Lee and David G. Grier
 ;-
@@ -172,12 +173,17 @@ gamma = imaginary(qfactor)
 
 E = fft(complex(a - 1.), -1, /center) ; Fourier transform of input field
 res = complexarr(nx, ny, nz, /nozero)
+
+oexcept = !Except
+!Except = 0
 for j = 0, nz-1 do begin
    Hqz = exp(ikappa * z[j] - gamma * abs(z[j])) ; Rayleigh-Sommerfeld propagator
    thisE = E * Hqz                              ; convolve with propagator
    thisE = fft(thisE, 1, /center, /overwrite)   ; transform back to real space
    res[0, 0, j] = thisE                         ; save result
 endfor
+void = check_math()
+!Except = oexcept
 
 return, res
 
