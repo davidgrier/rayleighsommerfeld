@@ -11,7 +11,7 @@
 ;     Holographic microscopy
 ;
 ; CALLING SEQUENCE:
-;     b = rayleighsommerfeld(a,z)
+;     b = rayleighsommerfeld(a, z, lambda, mpp)
 ;
 ; INPUTS:
 ;     a: hologram recorded as image data normalized
@@ -19,12 +19,8 @@
 ;     z: displacement from the focal plane [pixels]
 ;         If z is an array of displacements, the field
 ;         is computed at each plane.
-;
-; KEYWORDS:
 ;     lambda: Wavelength of light in medium [micrometers]
-;         Default: 0.632 -- HeNe in air
-;     mpp: Micrometers per pixel
-;         Default: 0.135
+;     mpp: Magnification [micrometer/pixel]
 ;
 ; KEYWORD_FLAGS:
 ;     nozphase: By default, a phase factor of kz is removed 
@@ -73,8 +69,10 @@
 ; IDL> help, a
 ; A     FLOAT     = Array[640, 480]
 ; IDL> phi = fltarr(640,200)
+; IDL> lambda = 0.500
+; IDL> mpp = 0.101
 ; IDL> for z = 1., 200 do begin $
-; IDL> phiz = atan(rayleighsommerfeld(a,z,lambda=lambda),/phase) & $
+; IDL> phiz = atan(rayleighsommerfeld(a,z,lambda,mpp),/phase) & $
 ; IDL> phi[*,z-1] = phiz[*,230] & $
 ; IDL> endfor
 ; IDL> tvscl, phi
@@ -95,21 +93,32 @@
 ; 10/20/2010: DGG Subtract 1 from (normalized) hologram
 ;   rather than expecting user to do subtraction.
 ; 06/24/2012 DGG Overhauled computation of Hqz.
+; 03/17/2013 DGG More efficient array manipulations.
+;   Require lamba and mpp as input parameters.  Check inputs.
 ;
 ; Copyright (c) 2006-2012 Sanghyuk Lee and David G. Grier
 ;-
-function rayleighsommerfeld, a, z, $
-                             lambda = lambda, $ ; wavelength of light
-                             mpp = mpp, $       ; micrometers per pixel
+function rayleighsommerfeld, a, z, lambda, mpp, $
                              nozphase = nozphase, $
                              hanning = hanning 
 
 COMPILE_OPT IDL2
 
+umsg = 'result = rayleighsommerfeld(hologram, z, lambda, mpp)'
+
+if n_params() ne 4 then begin
+   message, umsg, /inf
+   return, -1
+endif
+
 ; hologram dimensions
 sz = size(a)
 ndim = sz[0]
-if ndim gt 2 then message, "requires two-dimensional hologram"
+if ~isa(a, /number, /array) || (ndim ne 2) then begin
+   message, umsg, /inf
+   message, 'HOLOGRAM must be a two dimensional numeric array', /inf
+   return, -1
+endif
 nx = float(sz[1])
 if ndim eq 1 then $
   ny = 1. $
@@ -117,17 +126,28 @@ else $
   ny = float(sz[2])
 
 ; volumetric slices
+if ~isa(z, /number) then begin
+   message, umsg, /inf
+   message, 'Z should specify the height of the image plane in pixels', /inf
+   return, -1
+endif
 nz = n_elements(z)              ; number of z planes
 
 ; parameters
-if n_elements(lambda) ne 1 then $
-   lambda = 0.632               ; HeNe laser in air
-if n_elements(mpp) ne 1 then $
-   mpp = 0.135                  ; Nikon rig
+if ~isa(lambda, /scalar, /number) then begin
+   message, umsg, /inf
+   message, 'LAMBDA should be the wavelength of light in the medium in micrometers', /inf
+   return, -1
+endif
+
+if ~isa(mpp, /scalar, /number) then begin
+   message, umsg, /inf
+   message, 'MPP should be the magnification in micrometers per pixel', /inf
+   return, -1
+endif
 
 ci = complex(0., 1.)
 k = 2.*!pi*mpp/lambda           ; wavenumber in radians/pixel
-;ikz = ci*k*z
 
 ; phase factor for Rayleigh-Sommerfeld propagator in Fourier space
 ; Refs. [2] and [3]
@@ -151,17 +171,12 @@ ikappa = ci * real_part(qfactor)
 gamma = imaginary(qfactor) 
 
 E = fft(complex(a - 1.), -1, /center) ; Fourier transform of input field
-res = complexarr(nx,ny,nz)
+res = complexarr(nx, ny, nz, /nozero)
 for j = 0, nz-1 do begin
-   ; Rayleigh-Sommerfeld propagator
-;   if z[j] gt 0 then $
-;      Hqz = exp(-ikz[j] * conj(qfactor)) $
-;   else $
-;      Hqz = exp(-ikz[j] * qfactor)
-   Hqz = exp(ikappa * z[j] - gamma * abs(z[j]))
-   thisE = E * Hqz                            ; convolve with propagator
-   thisE = fft(thisE, 1, /center, /overwrite) ; transform back to real space
-   res[*,*,j] = thisE                         ; save result
+   Hqz = exp(ikappa * z[j] - gamma * abs(z[j])) ; Rayleigh-Sommerfeld propagator
+   thisE = E * Hqz                              ; convolve with propagator
+   thisE = fft(thisE, 1, /center, /overwrite)   ; transform back to real space
+   res[0, 0, j] = thisE                         ; save result
 endfor
 
 return, res
