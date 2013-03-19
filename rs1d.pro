@@ -53,9 +53,10 @@
 ; 06/22/2012 Written by David G. Grier, New York University
 ; 07/16/2012 DGG Correct floating point underflow errors
 ; 03/18/2013 DGG Remove unused argument.  Require LAMBDA and MPP
-;   as inputs
+;   as inputs.  Suppress floating point underflow errors rather
+;   than correcting them, for efficiency.
 ;
-; Copyright (c) 2012 David G. Grier
+; Copyright (c) 2012-2013 David G. Grier
 ;-
 function rs1d, a, z, rc, lambda, mpp
 
@@ -124,18 +125,18 @@ qrc = rebin(rc[0] * qx, nx, ny) + rebin(rc[1] * qy, nx, ny) ; \vec{q} \cdot \vec
 qfac = k * sqrt(complex(1. - qsq)) - k ; \sqrt(k^2 - q^2) - k
 ikappa = ci * real_part(qfac)
 gamma = imaginary(qfac)
-limit = abs(alog((machar()).eps))     ; largest exponent retaining precision
 
 b = fft(complex(a - 1.), -1, /center) ; Fourier transform of input field
 b *= exp(ci*qrc)                      ; center on rc
 res = complexarr(nz, /nozero)
+oexcept = !except
+!except = 0
 for j = 0, nz-1 do begin
-   gz = gamma * abs(z[j])
-   mask = gz lt limit
-   gz *= mask
-   Hqz = mask * exp(ikappa * z[j] - gz)
+   Hqz = exp(ikappa * z[j] - gamma * abs(z[j]))
    res[j] = total(b * Hqz)
 endfor
+void = check_math()
+!except = oexcept
 
 return, res
 
