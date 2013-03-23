@@ -55,6 +55,7 @@
 ; 03/18/2013 DGG Remove unused argument.  Require LAMBDA and MPP
 ;   as inputs.  Suppress floating point underflow errors rather
 ;   than correcting them, for efficiency.
+; 03/22/2013 DGG rebin(/sample) is more efficient.
 ;
 ; Copyright (c) 2012-2013 David G. Grier
 ;-
@@ -119,8 +120,8 @@ k = 2.*!pi*mpp/lambda           ; wavenumber in radians/pixel
 qx = (2.*!pi/nx) * findgen(nx) - !pi
 qy = (2.*!pi/ny) * findgen(1, ny) - !pi
 
-qsq = rebin((qx/k)^2, nx, ny) + rebin((qy/k)^2, nx, ny)     ; (q/k)^2
-qrc = rebin(rc[0] * qx, nx, ny) + rebin(rc[1] * qy, nx, ny) ; \vec{q} \cdot \vec{r}_c
+qsq = rebin((qx/k)^2, nx, ny, /sample) + rebin((qy/k)^2, nx, ny, /sample) ; (q/k)^2
+qrc = rebin(rc[0] * qx, nx, ny, /sample) + rebin(rc[1] * qy, nx, ny, /sample) ; \vec{q} \cdot \vec{r}_c
 
 qfac = k * sqrt(complex(1. - qsq)) - k ; \sqrt(k^2 - q^2) - k
 ikappa = ci * real_part(qfac)

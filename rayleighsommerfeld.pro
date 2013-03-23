@@ -96,8 +96,9 @@
 ; 03/17/2013 DGG More efficient array manipulations.
 ;   Require lamba and mpp as input parameters.  Check inputs.
 ;   Suppress floating point underflow errors.
+; 03/22/2013 DGG rebin(/sample) is more efficient.
 ;
-; Copyright (c) 2006-2012 Sanghyuk Lee and David G. Grier
+; Copyright (c) 2006-2013 Sanghyuk Lee and David G. Grier
 ;-
 function rayleighsommerfeld, a, z, lambda, mpp, $
                              nozphase = nozphase, $
@@ -157,7 +158,7 @@ qsq = ((lambda/mpp) * qx)^2
 
 if ndim eq 2 then begin
    qy = findgen(1, ny)/ny - 0.5
-   qsq = rebin(qsq, nx, ny) + rebin(((lambda/mpp) * qy)^2, nx, ny)
+   qsq = rebin(qsq, nx, ny, /sample) + rebin(((lambda/mpp) * qy)^2, nx, ny, /sample)
 endif
 
 qfactor = k * sqrt(complex(1. - qsq))
