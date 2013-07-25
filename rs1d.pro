@@ -10,7 +10,7 @@
 ;    Holographic microscopy
 ;
 ; CALLING SEQUENCE:
-;    b = rs1d(a, z, rc)
+;    b = rs1d(a, z, rc, lambda, mpp)
 ;
 ; INPUTS:
 ;    a: hologram recorded as image data normalized
@@ -20,12 +20,8 @@
 ;        is computed at rc for each height.
 ;    rc: [x,y] coordinates of center along which to compute
 ;        back-propagation [pixels]
-;
-; KEYWORDS:
 ;    lambda: Wavelength of light in medium [micrometers]
-;        Default: 0.632 -- HeNe in air
-;    mpp: Micrometers per pixel
-;        Default: 0.135
+;    mpp: Magnification [micrometers/pixel]
 ;
 ; OUTPUTS:
 ;     b: complex field along line passing through rc in the plane
@@ -56,6 +52,7 @@
 ;   as inputs.  Suppress floating point underflow errors rather
 ;   than correcting them, for efficiency.
 ; 03/22/2013 DGG rebin(/sample) is more efficient.
+; 07/24/2013 DGG documentation fixes.
 ;
 ; Copyright (c) 2012-2013 David G. Grier
 ;-
